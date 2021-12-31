@@ -1,0 +1,37 @@
+name: KinD
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["**"]
+
+jobs:
+  kind:
+    name: Introspect
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.2.0
+      - name: Get APIs from KinD
+        id: apis
+        shell: bash
+        run: |
+          ./get-apis
+      - name: Debug in nektos/act
+        if: ${{ env.ACT }}
+        shell: bash
+        run: |
+          for file in $(find ${{ steps.apis.outputs.output_dir }} -type f); do
+            echo "::$file:"
+            cat "$file"
+            echo
+          done
+      - name: Publish API info
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: "apis-${{ github.run_id }}"
+          path: |
+            ${{ steps.apis.outputs.output_dir }}

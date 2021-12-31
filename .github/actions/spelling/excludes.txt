@@ -37,4 +37,5 @@ ignore$
 \.wav$
 \.woff2?$
 \.zip$
+^w$
 ^\.github/

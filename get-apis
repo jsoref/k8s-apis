@@ -1,0 +1,33 @@
+#!/bin/sh
+SILENCE=-sq
+kubectl config use-context kind-chart-testing
+kubectl version
+kubectl proxy &
+output_dir=$(mktemp -d)
+echo "::set-output name=output_dir::$output_dir"
+api_sources="$output_dir/api_sources.list"
+echo localhost:8001/api/v1 >> "$api_sources"
+echo "::set-output name=api_sources::$api_sources"
+extra_apis="$output_dir/extra_apis.list"
+export api_prefix=localhost:8001/apis/
+curl $SILENCE $api_prefix > "$extra_apis"
+echo "::set-output name=extra_apis::$extra_apis"
+jq -r '.groups[].preferredVersion.groupVersion' $extra_apis | perl -pne 's{^}{$ENV{api_prefix}}' >> "$api_sources"
+apis="$output_dir/apis.json"
+(
+for api in $(cat $api_sources); do
+    curl $SILENCE $api
+    echo
+done
+) > "$apis"
+echo "::set-output name=apis::$apis"
+words="$output_dir/words.list"
+echo "::set-output name=words::$words"
+jq 'del(.resources[].storageVersionHash)' $apis |
+  perl -pne 's{v\d+|\W+}{\n}g'|
+  ./w |
+  perl -pne 's{\W+}{\n}g' |
+  sort -u |
+  sort -f > "$words"
+echo "Done..."
+(cd $output_dir; wc -l *)

@@ -1,0 +1,10 @@
+api
+config
+github
+https
+json
+kubectl
+localhost
+mktemp
+perl
+pne
